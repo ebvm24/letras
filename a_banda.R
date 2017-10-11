@@ -10,6 +10,27 @@ library(tidyverse)
 library(tidytext)
 library(reshape2)
 
+## Subroutines #################################################################
+lyrics_df <- function(song, simplify = F){
+  lyrics <- melt(song[['lyrics']])
+  names(lyrics) <- c('Lyric','Stanza')
+  
+  lyrics$Lyric <- as.character(lyrics$Lyric)
+  lyrics$Line <- seq(1,length(lyrics$Lyric))
+  
+  lyrics <- as_data_frame(lyrics)
+  
+  lyrics1 <- lyrics %>% group_by(Lyric) %>% top_n(1,-Line)
+  
+  if(simplify){
+    lyrics %>% distinct(Lyric)
+  }
+  
+  return(lyrics)
+  
+}
+################################################################################
+
 ## My Theme
 
 my_theme <- theme_minimal()
@@ -18,19 +39,16 @@ theme_set(my_theme)
 #source('scrape_lyrics.R')
 ## Tidy Data
 
+## Read in the songs and stop words
 all_songs <- readRDS(file = 'chico_buarque_song_list.rds')
+stop_words_pt <- read_table('stopwords.txt',col_names='word') %>%
+  full_join(data_frame(word='pra'))
 
-stop_words_pt <- read_table('stopwords.txt',col_names='word')
+## Consider one song at a time
+pick_a_song <- 'Essa Moça Tá Diferente'
+song <- all_songs[[pick_a_song]]
 
-a <- all_songs$`A Banda`
-
-lyrics <- melt(a$lyrics)
-names(lyrics) <- c('Lyric','Stanza')
-
-lyrics$Lyric <- as.character(lyrics$Lyric)
-lyrics$Line <- seq(1,length(lyrics$Lyric))
-
-lyrics <- as_data_frame(lyrics)
+lyrics <- lyrics_df(song)
 
 # Unnest Tokens
 tidy_song <- lyrics %>%
@@ -45,12 +63,13 @@ tidy_song %>%
   geom_col()+
   scale_fill_gradient2(low = "yellow", mid = "forestgreen",high = "blue", midpoint = 5) +
   xlab(NULL)+
-  coord_flip()
+  coord_flip()+
+  labs(title = pick_a_song)
 
 ## All of Chico Buarque's Songs in Portuguese
 all <- all_songs
 
-span <- c('Mar Y Luna')
+span <- c('Mar Y Luna',"Mambembe (en Español)")
 fren <- c('La Nuit Des Masques')
 ital <- c('La TV', 'La Rita', 'La Banda', 'Vita',
           'Una Mia Canzone','Tu Sei Una Di Noi',
@@ -69,7 +88,9 @@ ital <- c('La TV', 'La Rita', 'La Banda', 'Vita',
           "Ed Ora Dico Sul Serio (Agora Falando Sério)",
           "C´è più samba",
           "Ciao, Ciao, Addio",
-          "C'è Più Samba")
+          "C'è Più Samba",
+          "Pedro Pedreiro (Italiano)",
+          "Olê, Olá (Italiano)")
 
 map_lyrics <- function(x){
   if(length(x[['lyrics']])==0){

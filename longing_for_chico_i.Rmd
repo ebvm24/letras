@@ -1,8 +1,9 @@
 ---
-title: "Longing for Chico - Part I"
+title: "Longing for Chico - Part 1"
 output:
-html_document: default
-html_notebook: default
+  html_document:
+    theme: paper
+    highlight: textmate
 ---
 
 ```{r setup, include=FALSE}
@@ -11,28 +12,21 @@ knitr::opts_chunk$set(cache = TRUE, warning = FALSE, message = FALSE,
                       echo = TRUE, dpi = 180)
 options(width=80, dplyr.width = 150)
 library(ggplot2)
-library(scales)
-theme_set(theme_minimal())
+library(elisalib)
+theme_set(theme_ebvm())
 ```
 
->*A marcha alegre se espalhou na avenida e insistiu*  
-*A lua cheia que vivia escondida surgiu*  
-*Minha cidade toda se enfeitou*  
-*Pra ver a banda passar cantando coisas de amor*
+One of my favorite artists is the Brazilian singer and songwriter Chico Buarque de Hollanda.  Though I have no real authority on the language (a few semesters in college), I have always found his songs exceptionally lyrical and poetic.  In general, Portugese vowels and the syntactic rhythms lend themselves well to many Brazilian musical styles, particularly Samba and Bossa Nova.
 
-One of my favorite artists is the Brazilian singer and songwriter Chico Buarque de Hollanda.  Though I have no real authority on the language (a few semesters in college), I have always found his songs exceptionally lyrical and poetic.  In general, Portugese vowels and the syntactic rhythms lend themselves particularly well to many Brazilian musical styles, particularly Samba and Bossa Nova.
+In an effort to learn more about natural language processing, I decided to start learning by mining texts that I love - Samba and Bossa Nova songs.  However, doing so means I shift what I am learning in text mining from English to Portuguese.  With David Robinson and Julia Silge's [*Tidy Text Mining with R*](http://tidytextmining.com/) in hand, I set out to learn a bit more about the inherent patterns of Chico's lyrics and understand his key themes and poetry.
 
-<iframe width="560" height="315" frameborder="0" allowfullscreen src="https://www.youtube.com/watch?v=V7BaT6UKzog"></iframe>
-
-In an effort to learn more about natural language processing, I decided to start learning by mining texts that I love - Samba and Bossa Nova songs.  However, I would have to shift what I am learning in text mining from English to Portuguese.  With David Robinson and Julia Silge's [*Tidy Text Mining with R*](http://tidytextmining.com/) in hand, I set out to learn a bit more about the inherent patterns of Chico's lyrics and understand his key themes and poetry.
-
-First up, getting the data to begin with!
+First up, getting the data to start mining!
 
 ## Scraping Lyrics
 
-The first step was, of course, to the lyrics of all of his songs.  I started at the website [letras.com](https://www.letras.com), which seemed to have a fairly comprehensive list of Chico's songs.  An entirely separate project would be corroborating this website, determining which (if any) songs and albums are missing, and filling those in. 
+The first step was, of course, to get the lyrics of all of his songs.  I started at the website [letras.com](https://www.letras.com), which seemed to have a fairly comprehensive list of Chico's songs.  An entirely separate project would be corroborating this website, determining which (if any) songs and albums are missing, and filling those in. 
 
-In the past, I usually use Beautiful Soup to scrape things in Python, but I wanted to see how easy it was to scrape data in R using [rvest](https://github.com/hadley/rvest).  Conclusion: very easy.
+In the past, I usually use Beautiful Soup to scrape things in Python, but I wanted to see how easy it was to scrape data in R using [rvest](https://github.com/hadley/rvest).  Conclusion: very easy.  In fact, I have since cleaned up the scraping code and turned it into a [package](http://github.com/ebvm24/lyricsScrapeR) to scrape any artist's songs from the website.  But feel free to read on if you are intersted in the code breakdown.
 
 ```{r letras_website}
 ## Libraries
@@ -79,7 +73,7 @@ song_info <- function(a){
 ```
 
 
-Then, all I needed to do was apply song_info() to each item in song_index, which I did using map() from the purrr package.
+Then, all I needed to do was apply song_info() to each item in song_index, which I did using map() from the [purrr](https://github.com/tidyverse/purrr) package.
 
 For close to 500 links, the script ran fairly quickly.  I saved each song as a list item, then saved that list to a **.rds** file so I wouldn't have to run it again. 
 
@@ -109,8 +103,20 @@ a_banda <- song_info(song_index[[2]])
 a_banda$lyrics[1:2]
 `````
 
-The script can easily be used to download all the songs for other artists on this site, which hopefully I'll use for another analysis (Joao Gilberto, Cartola, and Gilberto Gil - I'm comin' at ya!).
+Hopefully that walkthrough explained the process of scraping lyrics.  With my newly created [lyricScrapeR](https://github.com/ebvm24/lyricsScrapeR.R) package, I condensed the above code into one line.  I've tested it with a few other artists and it seems to be working well.
 
+```{r package, eval=FALSE}
+library(devtools)
+install('lyricsScrapeR','ebvm24')
+library(lyricsScrapeR)
+
+chico_buarque <- scrape_songs('chico_buarque','https://www.letras.com/chico-buarque/', write_rds=T)
+
+`````
+
+Now, that was just the scraping.  Then comes the cleaning before you can really dig into any text analysis...
+
+Stay tuned!
 
 
 

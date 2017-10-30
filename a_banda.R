@@ -8,47 +8,26 @@
 ## Libraries
 library(tidyverse)
 library(tidytext)
-library(reshape2)
+library(elisalib)
+library(forcats)
 
-## Subroutines #################################################################
-lyrics_df <- function(song, simplify = F){
-  lyrics <- melt(song[['lyrics']])
-  names(lyrics) <- c('Lyric','Stanza')
-  
-  lyrics$Lyric <- as.character(lyrics$Lyric)
-  lyrics$Line <- seq(1,length(lyrics$Lyric))
-  
-  lyrics <- as_data_frame(lyrics)
-  
-  lyrics1 <- lyrics %>% group_by(Lyric) %>% top_n(1,-Line)
-  
-  if(simplify){
-    lyrics %>% distinct(Lyric)
-  }
-  
-  return(lyrics)
-  
-}
-################################################################################
+library(devtools)
+theme_set(theme_ebvm())
 
-## My Theme
+#source('clean_chico.R')
+source('tidy_lyrics_helpers.R')
 
-my_theme <- theme_minimal()
-theme_set(my_theme)
-
-#source('scrape_lyrics.R')
-## Tidy Data
-
-## Read in the songs and stop words
+## Read in the songs, album list, and stop words
 all_songs <- readRDS(file = 'chico_buarque_song_list.rds')
+album_df <- read_csv(file = 'chico_buarque_album_df.csv')
 stop_words_pt <- read_table('stopwords.txt',col_names='word') %>%
   full_join(data_frame(word='pra'))
 
 ## Consider one song at a time
-pick_a_song <- 'Essa Moça Tá Diferente'
+pick_a_song <- 'A Banda'
 song <- all_songs[[pick_a_song]]
 
-lyrics <- lyrics_df(song)
+lyrics <- lyrics_df(song,simplify=T)
 
 # Unnest Tokens
 tidy_song <- lyrics %>%
@@ -66,54 +45,10 @@ tidy_song %>%
   coord_flip()+
   labs(title = pick_a_song)
 
-## All of Chico Buarque's Songs in Portuguese
-all <- all_songs
+portuguese <- all_songs[!names(all_songs) %in% album_df$Language[album_df$Language=='Portuguese']]
 
-span <- c('Mar Y Luna',"Mambembe (en Español)")
-fren <- c('La Nuit Des Masques')
-ital <- c('La TV', 'La Rita', 'La Banda', 'Vita',
-          'Una Mia Canzone','Tu Sei Una Di Noi',
-          'Rotativa',
-          'Queste e Quelle',
-          'Oh Che Sarà',
-          'Non Vuoi Ascoltare',
-          "Maddalena E' Andata Via",
-          "Lei No, Lei Sta Ballando (Ela Desatinou)",
-          "In Te (Mulher, Vou Dizer Quanto Eu Te Amo)",
-          "In Memoria Di Un Congiurate",
-          "Il Nome Di Maria (Não Fala de Maria)",
-          "Genova Per Noi",
-          "Funerale Di Un Contadino",
-          "Far Niente (Bom Tempo)",
-          "Ed Ora Dico Sul Serio (Agora Falando Sério)",
-          "C´è più samba",
-          "Ciao, Ciao, Addio",
-          "C'è Più Samba",
-          "Pedro Pedreiro (Italiano)",
-          "Olê, Olá (Italiano)")
-
-map_lyrics <- function(x){
-  if(length(x[['lyrics']])==0){
-    return(NA)
-  }
-  df <- data.frame(melt(x[['lyrics']]))
-  df$Song <- x[['name']]
-  names(df) <- c('Lyric', 'Stanza', 'Song')
-  return(df)
-}
-
-lyrics <- map(all,map_lyrics)
-lyrics <- do.call(rbind.data.frame,lyrics)
-lyrics <- lyrics1 %>% 
-  group_by(Song) %>%
-  mutate(Line = seq(1,length(Lyric)),
-         Lyric = as.character(Lyric)) %>%
-  ungroup()
-lyrics <- as_data_frame(lyrics) %>%
-  filter(!Song %in% fren,
-         !Song %in% ital,
-         !Song %in% span) # Let's just consider portuguese songs, please
-
+lyrics <- clean_lyrics(portuguese,simp=F)
+lyrics_simplified <- clean_lyrics(portuguese,simp=T)
 
 ## Unnest Tokens in All Songs
 # Unnest Tokens
@@ -121,23 +56,100 @@ tidy_songs <- lyrics %>%
   unnest_tokens(word,Lyric) %>%
   anti_join(stop_words_pt)
 
-tidy_songs %>%
-  count(word, sort=TRUE) %>%
-  mutate(word = reorder(word,n)) %>%
+tidy_count <- tidy_songs %>%
+  count(word,sort=TRUE) %>%
+  mutate(word = reorder(word, n)) %>%
+  mutate(Simplified =F)
+
+## Simplified (i.e. Repitition Removed)
+tidy_simplified <- lyrics_simplified %>%
+  unnest_tokens(word,Lyric) %>%
+  anti_join(stop_words_pt)
+
+count_simplified <- tidy_simplified %>%
+  count(word,sort=TRUE) %>%
+  mutate(word = reorder(word, n)) %>%
+  mutate(Simplified = T)
+
+all_counts <- full_join(tidy_count, count_simplified)
+
+all_counts %>%
+  group_by(Simplified) %>%
   top_n(20,n) %>%
-  ggplot(aes(x=word, y=n,fill=n)) +
-  geom_col()+
-  scale_fill_gradient2(low = "yellow", mid = "forestgreen",high = "dodgerblue3", midpoint = 50) +
-  xlab(NULL)+
+  ungroup() %>%
+  mutate(word = fct_reorder(as.factor(word),n)) %>%
+  ggplot(aes(x=word, y = n, fill=Simplified)) +
+  geom_col(position='dodge') + 
+  scale_fill_geno(palette='Ordem')+
+  xlab(NULL) +
   coord_flip()
 
-pra <- lyrics %>%
-  filter(grepl('pra',Lyric)) %>% distinct(Song)
-pra
-che <- lyrics %>%
-  filter(grepl(' che ',Lyric)) %>% distinct(Song)
-che %>% print(n=25)
+## Bigrams - simplified
+buarque_bigrams <- lyrics_simplified %>%
+  unnest_tokens(bigram, Lyric, token = "ngrams", n = 2)
 
-#' Ok, some of these words should be added to our stop words file:
-#' pra: contraction of para
-#' 
+buarque_bigrams %>%
+  count(bigram, sort = TRUE)
+
+bigrams_separated <- buarque_bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ", remove = F)
+
+bigrams_filtered <- bigrams_separated %>%
+  filter(!word1 %in% stop_words_pt$word) %>%
+  filter(!word2 %in% stop_words_pt$word)
+
+# new bigram counts:
+bigram_counts <- bigrams_filtered %>%
+  count(word1, word2, sort = TRUE) %>%
+  unite(bigram, word1, word2, sep = " ")
+
+bigrams_separated <- bigrams_separated %>% full_join(bigram_counts)
+
+## What if we see which phrases he uses in more than one song (but only count them one time per song?)
+bigrams_filtered_per_song <- bigrams_separated %>%
+  filter(!word1 %in% stop_words_pt$word) %>%
+  filter(!word2 %in% stop_words_pt$word) %>%
+  distinct(Song, bigram, word1, word2)
+
+# new bigram counts:
+bigram_counts_per_song <- bigrams_filtered_per_song %>%
+  count(word1, word2, sort = TRUE) %>%
+  unite(bigram, word1, word2, sep = " ")
+
+bigrams_separated_per_song <- bigrams_separated %>% full_join(bigram_counts_per_song)
+
+
+## TF-IDF
+chico_words <- lyrics_simplified %>%
+  unnest_tokens(word, Lyric) %>%
+  count(Song, word, sort = TRUE) %>%
+  ungroup()
+
+total_words <- chico_words %>%
+  group_by(Song) %>%
+  summarize(total = sum(n)) %>%
+  ungroup()
+
+chico_words <- left_join(chico_words, total_words)
+
+chico_words %>%
+  filter(Song %in% c('A Banda', 'Mambembe')) %>%
+  ggplot(aes(n/total, fill=Song))+
+  geom_histogram(show.legend = FALSE, bins = 10) +
+  facet_grid(Song~.,scales = 'free_y')+
+  scale_fill_geno()
+
+freq_by_rank <- chico_words %>%
+  group_by(Song) %>%
+  mutate(rank = row_number(),
+         `term frequency` = n/total) %>%
+  arrange(-`term frequency`)
+freq_by_rank
+
+## Bind_Tf_IDF
+chico_words <- chico_words %>%
+  bind_tf_idf(word,Song,n)
+
+### Sentiment
+
+get_word_sentiment("aurora")

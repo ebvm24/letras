@@ -1,8 +1,8 @@
 ---
-title: "Longing for Chico - Part 1"
+title: "Tem muito samba, muito choro, e rock 'n roll"
 output:
   html_document:
-    theme: paper
+    theme: yeti
     highlight: textmate
 ---
 
@@ -18,15 +18,17 @@ theme_set(theme_ebvm())
 
 One of my favorite artists is the Brazilian singer and songwriter Chico Buarque de Hollanda.  Though I have no real authority on the language (a few semesters in college), I have always found his songs exceptionally lyrical and poetic.  In general, Portugese vowels and the syntactic rhythms lend themselves well to many Brazilian musical styles, particularly Samba and Bossa Nova.
 
-In an effort to learn more about natural language processing, I decided to start learning by mining texts that I love - Samba and Bossa Nova songs.  However, doing so means I shift what I am learning in text mining from English to Portuguese.  With David Robinson and Julia Silge's [*Tidy Text Mining with R*](http://tidytextmining.com/) in hand, I set out to learn a bit more about the inherent patterns of Chico's lyrics and understand his key themes and poetry.
+<iframe width="560" height="315" src="https://www.youtube.com/watch?v=ml8OpKjh4Ic" frameborder="0" allowfullscreen></iframe>
 
-First up, getting the data to start mining!
+In an effort to learn more about natural language processing, I decided to start by mining texts that I love - Samba and Bossa Nova songs.  However, doing so means shifting from English to Portuguese.  With David Robinson and Julia Silge's [*Tidy Text Mining with R*](http://tidytextmining.com/) in hand, I set out to learn a bit more about the inherent patterns of Chico's lyrics and understand his key themes and poetry.
+
+This first post, however, describes how I scraped, shaped, and cleaned the lyrics data for all of Chico Buarque's songs.  Stay tuned for more posts on the tidy text analysis of said lyrics.
 
 ## Scraping Lyrics
 
-The first step was, of course, to get the lyrics of all of his songs.  I started at the website [letras.com](https://www.letras.com), which seemed to have a fairly comprehensive list of Chico's songs.  An entirely separate project would be corroborating this website, determining which (if any) songs and albums are missing, and filling those in. 
+I started at the website [letras.com](https://www.letras.com), which seemed to have a fairly comprehensive list of all of Chico Buarque's songs.  An entirely separate project would be corroborating this website, determining which (if any) songs and albums are missing, and filling those in. 
 
-In the past, I usually use Beautiful Soup to scrape things in Python, but I wanted to see how easy it was to scrape data in R using [rvest](https://github.com/hadley/rvest).  Conclusion: very easy.  In fact, I have since cleaned up the scraping code and turned it into a [package](http://github.com/ebvm24/lyricsScrapeR) to scrape any artist's songs from the website.  But feel free to read on if you are intersted in the code breakdown.
+In the past, I have usually used Beautiful Soup to scrape things in Python, but I wanted to see how easy it was to scrape data in R using [rvest](https://github.com/hadley/rvest).  Conclusion: very easy.  In fact, I have since cleaned up the scraping code and turned it into a [package](http://github.com/ebvm24/lyricsScrapeR) to scrape any artist's songs from the [letras.com](https://www.letras.com) website.  But feel free to read on if you are interested in the code breakdown and how to use it.
 
 ```{r letras_website}
 ## Libraries
@@ -38,7 +40,7 @@ site <- 'https://www.letras.com'
 artist_page <- 'https://www.letras.com/chico-buarque/'
 ```
 
-All I needed to do was scrape the title of every song listed on the artist page.  Each song title links to a separate page with the full lyrics for that song, so as I scraped the titles, I would also get the hyperlink to each individual page **html_chilren()**.
+All I needed to do was scrape the title of every song listed on the artist page.  Each song title links to a separate page with the full lyrics for that song, so as I scraped the titles, I would also get the hyperlink to each individual page **html_children()**, then pull those lyrics.
 
 ```{r scrape_song_list}
 song_index <- artist_page %>%
@@ -47,7 +49,7 @@ song_index <- artist_page %>%
   html_children()
 ```
 
-I created two functions, get_lyrics() - for reading the song lyrics from each song's page and saving those lyrics to a list - and song_info() - a wrapper function to apply get_lyrics() to each song saved in my song_index object.
+I created two functions, *get_lyrics()* - for reading the song lyrics from each song's page and saving those lyrics to a list - and *song_info()* - a wrapper function to apply get_lyrics() to each song saved in my song_index object.
 
 
 ```{r main_functions}
@@ -73,7 +75,7 @@ song_info <- function(a){
 ```
 
 
-Then, all I needed to do was apply song_info() to each item in song_index, which I did using map() from the [purrr](https://github.com/tidyverse/purrr) package.
+Then, all I needed to do was apply *song_info()* to each item in song_index, which I did using map() from the [purrr](https://github.com/tidyverse/purrr) package.
 
 For close to 500 links, the script ran fairly quickly.  I saved each song as a list item, then saved that list to a **.rds** file so I wouldn't have to run it again. 
 
@@ -101,22 +103,27 @@ Songs are structured as lines grouped by stanzas, and I wanted to preserve the i
 ```{r song_structure, eval=TRUE,echo=FALSE}
 a_banda <- song_info(song_index[[2]])
 a_banda$lyrics[1:2]
-`````
+```
 
 Hopefully that walkthrough explained the process of scraping lyrics.  With my newly created [lyricScrapeR](https://github.com/ebvm24/lyricsScrapeR.R) package, I condensed the above code into one line.  I've tested it with a few other artists and it seems to be working well.
 
 ```{r package, eval=FALSE}
 library(devtools)
-install('lyricsScrapeR','ebvm24')
-library(lyricsScrapeR)
+#install_github('lyricScrapeR', username = 'ebvm24')
+library("lyricScrapeR")
 
 chico_buarque <- scrape_songs('chico_buarque','https://www.letras.com/chico-buarque/', write_rds=T)
 
 `````
 
-Now, that was just the scraping.  Then comes the cleaning before you can really dig into any text analysis...
+Once I scraped all the song lyrics for Chico Buarque,  I needed to do a little bit of cleaning of the data.  For starters, not all of the songs listed on the site are in Portuguese.  In fact, around the year 1970, Chico lived in exile in Italy after having been thrown in prison for *Roda Viva*, and has produced several albums in Italian (often translations of his Portuguese songs).  There were also several Spanish and French songs in the mix that I needed to filter.  I really only wanted to keep this analysis to one language!
 
-Stay tuned!
+Chico Buarque also has an extensive discography.  His first album came out in 1966, and he's been a prolific songwriter since then, so I needed to map each song to its original album, using the [discography](https://pt.wikipedia.org/wiki/Chico_Buarque) list on wikipedia, so I manually [created](clean_chico.R) a dataframe for each song in the song_list, matching up the songs to the wikipedia discography.  I still had a fair number of songs that were't perfectly matched, but I thought this was a fairly good start.
 
+```{r album_df,eval=T,echo=F}
+album_df <- read_csv(file = 'chico_buarque_album_df.csv')
+album_df %>% head()
 
+```
 
+Stay tuned for some tidy text analyis!

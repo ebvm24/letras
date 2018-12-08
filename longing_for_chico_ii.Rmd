@@ -19,17 +19,19 @@ library(tidyverse)
 library(forcats)
 ```
 
-Portuguese has a wonderful word: [*saudade*](https://en.wikipedia.org/wiki/Saudade).  While it doesn't have an English equivalent, it is usually translated as a longing for something in the past or something unattainable.  It's a beautiful sentiment that is often seen in literature and music, not to mention it's a wonderful word to say: *SOW-dahhd-gee*.  I decided that analyzing and quantifying the use of *saudade* in Chico Buarque's lyrics, and eventually other artists, would be a nice framework for my first foray into text mining.  So I tried to frame my exploration and analysis to see what sentiments, particularly *saudades*, drive the music of Chico Buarqe de Hollanda. 
+Portuguese has a wonderful word: [*saudade*](https://en.wikipedia.org/wiki/Saudade).  While it doesn't have an English equivalent, it is usually translated as a longing for something in the past or something unattainable.  It's a beautiful sentiment that is often seen in literature and music, not to mention it's a wonderful word to say: *SOW-dahhd-gee*.
 
-Once I [got all the lyrics downloaded](previous blog post) for Chico Buarque,  I needed to do a little bit of cleaning of the data.  For starters, not all of the songs listed on the site are in Portuguese.  In fact, around 1970, Chico lived in exile in Italy after having been thrown in prison for *Roda Viva*, and has produced several albums in Italian (often translations of his Portuguese songs).  There were also several Spanish and French songs in the mix that I needed to filter.  I really only wanted to keep this analysis in one language!
+Why not analyze and quantify the use of *saudade* in Chico Buarque's lyrics?  Let's see what sentiments, particularly *saudades*, drive the music of Chico Buarqe de Hollanda. 
 
-Secondly, Chico Buarque has an extensive discography.  His first album came out in 1966, and he's been a prolific songwriter since then, so I thought it would be interesting to try to map each song to its original album, using the [discography](https://pt.wikipedia.org/wiki/Chico_Buarque) list on wikipedia, so I [created](clean_chico.R) a dataframe for each song in the song_list, matching up the songs to the wikipedia discography.  I still had a fair number of songs that were't perfectly matched, but I thought this was a fairly good start.
+Once I [got all the lyrics downloaded](previous blog post) for Chico Buarque,  I needed to do a little bit of cleaning of the data.  For starters, not all of the songs listed on the site are in Portuguese.  In fact, around the year 1970, Chico lived in exile in Italy after having been thrown in prison for *Roda Viva*, and has produced several albums in Italian (often translations of his Portuguese songs).  There were also several Spanish and French songs in the mix that I needed to filter.  I really only wanted to keep this analysis to one language!  Chico Buarque also has an extensive discography.  His first album came out in 1966, and he's been a prolific songwriter since then, so I needed to map each song to its original album, using the [discography](https://pt.wikipedia.org/wiki/Chico_Buarque) list on wikipedia, so I manually [created](clean_chico.R) a dataframe for each song in the song_list, matching up the songs to the wikipedia discography.  I still had a fair number of songs that were't perfectly matched, but I thought this was a fairly good start.
 
 ```{r album_df,eval=T,echo=F}
 album_df <- read_csv(file = 'chico_buarque_album_df.csv')
 album_df %>% head()
 
 ```
+
+Thanks for reading this far.  Stay tuned in the next post for some Tidy Text Analysis!
 
 ## Tidy Text Basics
 
